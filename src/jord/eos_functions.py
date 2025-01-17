@@ -69,30 +69,40 @@ def calculate_temperature(radii, core_radius, surface_temp, cmb_temp, material_p
     temperature[-1] = surface_temp  # Surface temperature as the starting point
 
     # Iterate inward from the surface (reverse order in the arrays)
-    for i in range(len(radii) - 1, 0, -1):
+    for i in range(len(radii)-1, 0, -1):
         radius = radii[i]
         
-        # Determine the material type: mantle or core
-        if radius > core_radius:
-            material = "mantle"
-        else:
-            material = "core"
-
-        gamma = material_properties[material]["gamma0"]
-
         # Define the adiabatic gradient equation
         def adiabatic_gradient(T, radius_idx):
             return -(density[radius_idx] * gravity[radius_idx] * gamma * T) / K_s
+   
+        # Handle mantle region
+        if radius > core_radius:
+            material = "mantle"
+            gamma = material_properties[material]["gamma0"]
+            #print(f"i={i}, radius={radius}, temperature={temperature[i]}")
+
+        # Handle transition at CMB
+        elif radius == core_radius:
+            temperature[i] = cmb_temp
+            #print(f"i={i}, radius={radius}, temperature={temperature[i]}")
+
+        # Handle core region
+        else:
+            material = "core"
+            #print(f"i={i}, radius={radius}, temperature={temperature[i]}")
+            gamma = material_properties[material]["gamma0"]
 
         # Apply RK4 Method
         current_temp = temperature[i]
-        k1 = -dr * adiabatic_gradient(current_temp, i)  # Reverse integration direction
+        k1 = -dr * adiabatic_gradient(current_temp, i)
         k2 = -dr * adiabatic_gradient(current_temp + 0.5 * k1, i - 1)
         k3 = -dr * adiabatic_gradient(current_temp + 0.5 * k2, i - 1)
         k4 = -dr * adiabatic_gradient(current_temp + k3, i - 2)
 
         # Update temperature at the previous radius
         temperature[i - 1] = current_temp + (k1 + 2 * k2 + 2 * k3 + k4) / 6
+
 
     return temperature
 
